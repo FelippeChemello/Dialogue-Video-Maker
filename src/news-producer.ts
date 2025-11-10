@@ -1,4 +1,3 @@
-/* eslint-disable no-case-declarations */
 import fs from 'fs';
 import path from 'path';
 
@@ -23,12 +22,13 @@ import { ENV } from './config/env';
 import { AudioEditorClient } from './clients/interfaces/AudioEditor';
 import { FFmpegClient } from './clients/ffmpeg';
 import { KokoroClient } from './clients/kokoro';
+import { GrokClient } from './clients/grok';
 
 const scriptManagerClient: ScriptManagerClient = new NotionClient(ENV.NOTION_NEWS_DATABASE_ID);
 const editor: AudioEditorClient = new FFmpegClient();
 const openai: LLMClient & ImageGeneratorClient = new OpenAIClient();
 const anthropic: LLMClient = new AnthropicClient();
-const gemini: LLMClient & ImageGeneratorClient & TTSClient = new GeminiClient();
+const grok: LLMClient = new GrokClient();
 const kokoro: TTSClient = new KokoroClient();
 const mermaid: MermaidRendererClient = new Mermaid();
 const shiki: CodeRendererClient = new Shiki();
@@ -38,7 +38,7 @@ const ENABLED_FORMATS: Array<'Portrait' | 'Landscape'> = ['Portrait'];
 const MAX_AUDIO_DURATION_FOR_SHORTS = 170;
 
 console.log(`Starting research about the latest news`);
-const { text: research } = await gemini.complete(Agent.NEWS_RESEARCHER, `Generate detailed research about the latest news in technology, science, health, and world events. Provide comprehensive information with relevant data and context.`);
+const { text: research } = await grok.complete(Agent.NEWS_RESEARCHER, `Generate detailed research about the latest news in technology, science, health, and world events. Provide comprehensive information with relevant data and context.`);
 
 console.log("--------------------------")
 console.log("Research:")
@@ -50,7 +50,15 @@ const { text: scriptText } = await openai.complete(Agent.NEWSLETTER_WRITER, rese
 
 console.log("Reviewing script...");
 const { text: review } = await anthropic.complete(Agent.NEWSLETTER_REVIEWER, scriptText)
-const scripts = JSON.parse(review) as ScriptWithTitle | ScriptWithTitle[];
+
+let scripts: ScriptWithTitle | ScriptWithTitle[] = []
+try {
+    scripts = JSON.parse(review)
+} catch (error) {
+    console.log("Failed to parse reviewed script, falling back to original script.");
+
+    scripts = JSON.parse(scriptText)
+}
 
 for (const script of Array.isArray(scripts) ? scripts : [scripts]) {
     console.log(`Processing script: ${script.title}`);
@@ -122,7 +130,7 @@ ${script.segments.map((s) => `${s.speaker}: ${s.text}`).join('\n')}`, 'utf-8');
     }));
 
     console.log("Generating SEO content...");
-    const { text: seoText } = await openai.complete(Agent.SEO_WRITER, review)
+    const { text: seoText } = await openai.complete(Agent.SEO_WRITER, review || scriptText);
     const seo = JSON.parse(seoText);
 
     await scriptManagerClient.saveScript(script, seo, [], ENABLED_FORMATS, path.basename(scriptTextFile));

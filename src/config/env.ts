@@ -27,6 +27,8 @@ const envSchema = z.object({
     OPENAI_FELIPPE_FILE_ID: z.string(),
 
     ANTHROPIC_API_KEY: z.string(),
+
+    GROK_API_KEY: z.string(),
     
     NOTION_TOKEN: z.string(),
     NOTION_DEFAULT_DATABASE_ID: z.string(),

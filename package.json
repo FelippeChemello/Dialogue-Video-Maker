@@ -48,6 +48,7 @@
     "@remotion/zod-types": "4.0.373",
     "@types/fluent-ffmpeg": "^2.1.27",
     "cli-progress": "^3.12.0",
+    "dayjs": "^1.11.19",
     "dotenv": "^17.2.3",
     "elevenlabs": "^1.59.0",
     "fluent-ffmpeg": "^2.1.3",
