@@ -25,4 +25,6 @@ Do not remove technical jargon or important details from the text, but ensure it
 Not all segments need an image description! It costs a lot of credits to generate images, so use them wisely. 
 You don't need to summarize the topic at the end, just end the script by Felippe asking the audience a question to keep them engaged.
 Ensure the reading time of each script does not exceed 1:30 minutes, if necessary, shorten the explanations while keeping them informative or split the script into multiple parts.
+Each script must have more than one news topic, group related topics together under a single title.
+Remove any greetings, sponsorship mentions, or unrelated content from the script.
 </attention>

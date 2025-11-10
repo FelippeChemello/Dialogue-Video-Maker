@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import dayjs from 'dayjs';
 import { getVideoDurationInSeconds } from 'get-video-duration';
 
 import { ScriptStatus } from './config/types';
@@ -47,7 +48,10 @@ for (const script of scripts) {
 const rendererBundle = await renderer.getBundle();
 console.log(`Renderer bundle created at: ${rendererBundle}`);
 
-for (const script of scripts) {
+for (const scriptIndex in scripts) {
+    const script = scripts[scriptIndex];
+    console.log(`\nProcessing script ${parseInt(scriptIndex) + 1} of ${scripts.length}: ${script.title}`);
+
     if (!script.id) {
         console.log(`Script "${script.title}" does not have an ID`);
         continue;
@@ -134,6 +138,9 @@ for (const script of scripts) {
                 videoPath,
                 title,
                 description.join('\n'),
+                undefined,
+                undefined,
+                dayjs().add(Number(scriptIndex), 'hours').toDate()
             );
 
             console.log(`Video uploaded: ${uploadResult.url}`);

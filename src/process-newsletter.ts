@@ -1,4 +1,4 @@
-/* eslint-disable no-case-declarations */
+ 
 import fs from 'fs';
 import path from 'path';
 
@@ -40,8 +40,10 @@ const gmail: NewsletterFetcher = new GmailClient();
 const ENABLED_FORMATS: Array<'Portrait' | 'Landscape'> = ['Portrait'];
 const MAX_AUDIO_DURATION_FOR_SHORTS = 170; // seconds
 
-console.log("Fetching newsletter content...");
-const newsletter = await gmail.fetchContent(NewsletterSource.FILIPE_DESCHAMPS);
+const newsletterFile = process.argv[2]
+const newsletter: { title: string; content: string } = newsletterFile 
+    ? { title: path.basename(newsletterFile, path.extname(newsletterFile)), content: fs.readFileSync(newsletterFile, 'utf-8') }
+    : await gmail.fetchContent(NewsletterSource.FILIPE_DESCHAMPS);
 
 console.log(`Starting research about the news`);
 const { text: research } = await gemini.complete(Agent.NEWS_REFINER, `Título: ${newsletter.title}\n\n Utilize o seguinte conteúdo do newsletter para realizar uma pesquisa aprofundada sobre o tópico:\n\n${newsletter.content}`);
@@ -56,87 +58,97 @@ const { text: scriptText } = await openai.complete(Agent.NEWSLETTER_WRITER, rese
 
 console.log("Reviewing script...");
 const { text: review } = await anthropic.complete(Agent.NEWSLETTER_REVIEWER, scriptText)
-const script = JSON.parse(review) as ScriptWithTitle
 
-const scriptTextFile = path.join(outputDir, `${titleToFileName(script.title)}.txt`);
-fs.writeFileSync(scriptTextFile, `
+let scripts: ScriptWithTitle | ScriptWithTitle[] = []
+try {
+    scripts = JSON.parse(review)
+} catch (error) {
+    scripts = JSON.parse(scriptText)
+}
+
+for (const script of Array.isArray(scripts) ? scripts : [scripts]) {
+    console.log(`Processing script: ${script.title}`);
+
+    const scriptTextFile = path.join(outputDir, `${titleToFileName(script.title)}.txt`);
+    fs.writeFileSync(scriptTextFile, `
 Read aloud this conversation between Felippe and his dog Cody. Cody has a curious and playful personality with an animated character like voice, while Felippe is knowledgeable and enthusiastic.
 Felippe is known for his vast knowledge, and Cody is a curious dog who is always asking questions about the world, both are Brazilian Portuguese speakers and have a super very fast-paced, energetic, and enthusiastic way of speaking.
 
 ${script.segments.map((s) => `${s.speaker}: ${s.text}`).join('\n')}`, 'utf-8');
 
-const audio = await kokoro.synthesizeScript(script.segments, 'full-script');
+    const audio = await kokoro.synthesizeScript(script.segments, 'full-script');
 
-if (audio.duration && audio.duration > MAX_AUDIO_DURATION_FOR_SHORTS) {
-    console.log(`Audio duration ${audio.duration}s exceeds maximum for shorts. Speeding up audio...`);
+    if (audio.duration && audio.duration > MAX_AUDIO_DURATION_FOR_SHORTS) {
+        console.log(`Audio duration ${audio.duration}s exceeds maximum for shorts. Speeding up audio...`);
 
-    const speedFactor = audio.duration / MAX_AUDIO_DURATION_FOR_SHORTS;
-    const audioPath = path.join(publicDir, audio.audioFileName);
+        const speedFactor = audio.duration / MAX_AUDIO_DURATION_FOR_SHORTS;
+        const audioPath = path.join(publicDir, audio.audioFileName);
 
-    const speededUpAudioPath = await editor.speedUpAudio(audioPath, speedFactor);
-    fs.unlinkSync(audioPath);
+        const speededUpAudioPath = await editor.speedUpAudio(audioPath, speedFactor);
+        fs.unlinkSync(audioPath);
 
-    audio.audioFileName = path.basename(speededUpAudioPath);
-}
+        audio.audioFileName = path.basename(speededUpAudioPath);
+    }
 
-script.audioSrc = audio.audioFileName;
+    script.audioSrc = audio.audioFileName;
 
-await Promise.all(script.segments.map(async (segment, index) => {
-    if (segment.illustration) {
-        let mediaSrc: string | undefined;
+    await Promise.all(script.segments.map(async (segment, index) => {
+        if (segment.illustration) {
+            let mediaSrc: string | undefined;
 
-        switch (segment.illustration.type) {
-            case 'mermaid': 
-                console.log(`[${index + 1}/${script.segments.length}] Generating mermaid`)
+            switch (segment.illustration.type) {
+                case 'mermaid': 
+                    console.log(`[${index + 1}/${script.segments.length}] Generating mermaid`)
 
-                const { text: mermaidCode } = await openai.complete(Agent.MERMAID_GENERATOR, `Specification: ${segment.illustration.description} \n\nContext: ${segment.text}`);
-                const exportedMermaid = await mermaid.exportMermaid(mermaidCode, index);
+                    const { text: mermaidCode } = await openai.complete(Agent.MERMAID_GENERATOR, `Specification: ${segment.illustration.description} \n\nContext: ${segment.text}`);
+                    const exportedMermaid = await mermaid.exportMermaid(mermaidCode, index);
 
-                mediaSrc = exportedMermaid.mediaSrc;
-                break;
+                    mediaSrc = exportedMermaid.mediaSrc;
+                    break;
 
-            case 'query': 
-                console.log(`[${index + 1}/${script.segments.length}] Searching for image`);
+                case 'query': 
+                    console.log(`[${index + 1}/${script.segments.length}] Searching for image`);
 
-                const imageSearched = await google.searchImage(segment.illustration.description, index)
-                
-                mediaSrc = imageSearched.mediaSrc
-                break;
+                    const imageSearched = await google.searchImage(segment.illustration.description, index)
+                    
+                    mediaSrc = imageSearched.mediaSrc
+                    break;
 
-            case 'code': 
-                console.log(`[${index + 1}/${script.segments.length}] Generating code`)
+                case 'code': 
+                    console.log(`[${index + 1}/${script.segments.length}] Generating code`)
 
-                const codeGenerated = await shiki.exportCode(segment.illustration.description, index);
-                
-                mediaSrc = codeGenerated.mediaSrc;
-                break;
+                    const codeGenerated = await shiki.exportCode(segment.illustration.description, index);
+                    
+                    mediaSrc = codeGenerated.mediaSrc;
+                    break;
 
-            case 'image_generation': 
-            default: 
-                console.log(`[${index + 1}/${script.segments.length}] Generating image`);
-                const mediaGenerated = await openai.generate(segment.illustration.description, index);
-                
-                mediaSrc = mediaGenerated.mediaSrc;
-                break;
+                case 'image_generation': 
+                default: 
+                    console.log(`[${index + 1}/${script.segments.length}] Generating image`);
+                    const mediaGenerated = await openai.generate(segment.illustration.description, index);
+                    
+                    mediaSrc = mediaGenerated.mediaSrc;
+                    break;
+            }
+
+            script.segments[index].mediaSrc = mediaSrc;
         }
+    }));
 
-        script.segments[index].mediaSrc = mediaSrc;
+    console.log("Generating SEO content...");
+    const { text: seoText } = await openai.complete(Agent.SEO_WRITER, review)
+    const seo = JSON.parse(seoText);
+
+    await scriptManagerClient.saveScript(script, seo, [], ENABLED_FORMATS, path.basename(scriptTextFile));
+
+    console.log(`Cleaning up assets...`)
+    for (const segment of script.segments) {
+        if (segment.mediaSrc) {
+            const imagePath = path.join(publicDir, segment.mediaSrc);
+            fs.unlinkSync(imagePath);
+        }
     }
-}));
 
-console.log("Generating SEO content...");
-const { text: seoText } = await openai.complete(Agent.SEO_WRITER, review)
-const seo = JSON.parse(seoText);
-
-await scriptManagerClient.saveScript(script, seo, [], ENABLED_FORMATS, path.basename(scriptTextFile));
-
-console.log(`Cleaning up assets...`)
-for (const segment of script.segments) {
-    if (segment.mediaSrc) {
-        const imagePath = path.join(publicDir, segment.mediaSrc);
-        fs.unlinkSync(imagePath);
-    }
+    fs.unlinkSync(scriptTextFile);
+    fs.unlinkSync(path.join(publicDir, script.audioSrc!));
 }
-
-fs.unlinkSync(scriptTextFile);
-fs.unlinkSync(path.join(publicDir, script.audioSrc!));

@@ -13,10 +13,8 @@ import { Script, Speaker } from '../config/types';
 import { getAudioDurationInSeconds } from 'get-audio-duration';
 import { Agent, Agents, LLMClient } from './interfaces/LLM';
 import { titleToFileName } from '../utils/title-to-filename';
-import { buffer } from 'stream/consumers';
 import { convertToWav } from '../utils/save-wav-file';
 import { sleep } from '../utils/sleep';
-
 
 const genAI = new GoogleGenAI({ apiKey: ENV.GEMINI_API_KEY })
 

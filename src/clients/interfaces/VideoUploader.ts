@@ -4,6 +4,7 @@ export interface VideoUploaderClient {
         title: string, 
         description: string, 
         thumbnailFilePath?: string,
-        tags?: Array<string>
+        tags?: Array<string>,
+        scheduleAt?: Date
     ): Promise<{ url: string }>;
 }

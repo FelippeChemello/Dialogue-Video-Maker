@@ -170,7 +170,6 @@ export class OpenAIClient implements TTSClient, ImageGeneratorClient, LLMClient 
             model: Agents[agent].model.openai,
             instructions: Agents[agent].systemPrompt,
             input: prompt,
-            reasoning: Agents[agent].model.openai === 'o3' ? { effort: 'high' } : undefined,
         });
 
         const text = response.output_text
