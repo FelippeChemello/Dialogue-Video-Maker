@@ -24,7 +24,8 @@ export class Youtube implements VideoUploaderClient {
         title: string, 
         description: string, 
         thumbnailFilePath?: string,
-        tags?: Array<string>
+        tags?: Array<string>,
+        scheduledPublishTime?: Date,
     ): Promise<{ url: string }> {
         console.log('[YOUTUBE] Authenticating with YouTube API')
         await this.authenticate()
@@ -42,7 +43,8 @@ export class Youtube implements VideoUploaderClient {
                     categoryId: '28' // Science & Technology
                 },
                 status: {
-                    privacyStatus: 'public',
+                    privacyStatus: scheduledPublishTime ? 'private' : 'public',
+                    publishAt: scheduledPublishTime ? scheduledPublishTime.toISOString() : undefined,
                     madeForKids: false,
                 },
             },

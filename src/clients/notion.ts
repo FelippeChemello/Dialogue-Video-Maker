@@ -87,7 +87,7 @@ export class NotionClient implements ScriptManagerClient {
                     }] : [],
                 },
                 Title: {
-                    rich_text: [{ type: 'text', text: { content: `${seo.title}\n\n${seo.description}\n\n${seo.hashtags.join(" ")}` } }],
+                    rich_text: [{ type: 'text', text: { content: `${seo.title}\n\n${seo.description}\n\n${seo.hashtags?.join(" ") || seo.tags?.join(" #") || ''}` } }],
                 },
                 Output: { 
                     files: [...thumbnailFileIds, scriptFileId].filter(Boolean).map((fileId) => ({
