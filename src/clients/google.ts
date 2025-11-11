@@ -19,11 +19,12 @@ export class Google implements SearcherClient {
     console.log(`[GOOGLE] Searching for: ${query}`);
 
     const { data } = await this.cse.cse.list({
-        auth: this.key,
-        cx: this.cx,
-        q: query,
-        num: 1,
-        searchType: 'image',
+      auth: this.key,
+      cx: this.cx,
+      q: query,
+      num: 1,
+      searchType: 'image',
+      fileType: 'jpg,png',
     });
 
     if (!data.items) return { mediaSrc: undefined }

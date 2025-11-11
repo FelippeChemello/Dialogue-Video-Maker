@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unused-vars, @typescript-eslint/no-non-null-asserted-optional-chain */
+/* eslint-disable @typescript-eslint/no-non-null-asserted-optional-chain */
 import fs, { writeFileSync } from 'fs'
 import { GoogleGenAI } from '@google/genai'
 import path from 'path';
@@ -17,6 +17,7 @@ import { convertToWav } from '../utils/save-wav-file';
 import { sleep } from '../utils/sleep';
 
 const genAI = new GoogleGenAI({ apiKey: ENV.GEMINI_API_KEY })
+const genAIPro = new GoogleGenAI({ apiKey: ENV.GEMINI_PAID_API_KEY })
 
 const voices: { [key in keyof typeof Speaker]: string } = {
     Cody: 'Puck',
@@ -30,44 +31,68 @@ export class GeminiClient implements ImageGeneratorClient, TTSClient, LLMClient 
 
     async synthesizeScript(script: Script, id?: string | number): Promise<{ audioFileName: string; duration: number; }> {
         const prompt = `
-            Read aloud this conversation between Felippe and his dog Cody.
-            Generate only the audio without any additional commentary.
-            Felippe is known for his vast knowledge, and Cody is a curious dog who is always asking questions about the world, both are Brazilian Portuguese speakers and have a fast-paced, energetic, and enthusiastic way of speaking.
+Read aloud this conversation between Felippe and his dog Cody.
+Generate only the audio without any additional commentary or text.
+Felippe is known for his vast knowledge, and Cody is a curious dog who is always asking questions about the world, both are Brazilian Portuguese speakers and have a fast-paced, energetic, and enthusiastic way of speaking.
 
-            ${script.map((s) => `${s.speaker}: ${s.text}`).join('\n')}
+${script.map((s) => `${s.speaker}: ${s.text}`).join('\n')}
         `;
 
         console.log(`[GEMINI] Synthesizing script`);
-        const audioResult = await genAI.models.generateContent({
-            model: 'gemini-2.5-pro-preview-tts',
-            contents: [{ parts: [{ text: prompt }] }],
-            config: {
-                responseModalities: ['audio'],
-                speechConfig: {
-                    multiSpeakerVoiceConfig: {
-                        speakerVoiceConfigs: [
-                            {
-                                speaker: Speaker.Cody,
-                                voiceConfig: {
-                                    prebuiltVoiceConfig: { voiceName: voices.Cody }
-                                }
-                            },
-                            {
-                                speaker: Speaker.Felippe,
-                                voiceConfig: {
-                                    prebuiltVoiceConfig: { voiceName: voices.Felippe }
-                                }
+        
+        let data: string | undefined;
+        let mimeType: string | undefined;
+        const maxRetries = 3;
+        let retries = 0;
+
+        while (retries < maxRetries) {
+            try {
+                const audioResult = await genAIPro.models.generateContent({
+                    model: 'gemini-2.5-pro-preview-tts',
+                    contents: [{ parts: [{ text: prompt }] }],
+                    config: {
+                        responseModalities: ['audio'],
+                        speechConfig: {
+                            multiSpeakerVoiceConfig: {
+                                speakerVoiceConfigs: [
+                                    {
+                                        speaker: Speaker.Cody,
+                                        voiceConfig: {
+                                            prebuiltVoiceConfig: { voiceName: voices.Cody }
+                                        }
+                                    },
+                                    {
+                                        speaker: Speaker.Felippe,
+                                        voiceConfig: {
+                                            prebuiltVoiceConfig: { voiceName: voices.Felippe }
+                                        }
+                                    }
+                                ]
                             }
-                        ]
+                        }
                     }
+                })
+
+                data = audioResult.candidates?.[0].content?.parts?.[0]?.inlineData?.data
+                mimeType = audioResult.candidates?.[0].content?.parts?.[0]?.inlineData?.mimeType
+                
+                if (!data || !mimeType) {
+                    throw new Error('No audio data found in the response');
+                }
+                
+                break;
+            } catch (error) {
+                retries++;
+                console.log(`[GEMINI] Error synthesizing audio: ${error}. Retry ${retries}/${maxRetries}`);
+                
+                if (retries >= maxRetries) {
+                    throw new Error(`[GEMINI] Failed to synthesize audio after ${maxRetries} attempts`);
                 }
             }
-        })
+        }
 
-        const data = audioResult.candidates?.[0].content?.parts?.[0]?.inlineData?.data
-        const mimeType = audioResult.candidates?.[0].content?.parts?.[0]?.inlineData?.mimeType
         if (!data || !mimeType) {
-            throw new Error('No audio data found in the response');
+            throw new Error('No audio data found after retries');
         }
 
         let audioBuffer = Buffer.from(data, 'base64')
@@ -153,7 +178,10 @@ export class GeminiClient implements ImageGeneratorClient, TTSClient, LLMClient 
                 { text: `Video Title: ${videoTitle} \n\n ${description}` },
                 { inlineData: { mimeType: 'image/png', data: felippeImg } }
             ],
-            config: { responseModalities: ['text', 'image'] },
+            config: { 
+                responseModalities: ['text', 'image'],
+                imageConfig: { aspectRatio: '4:3' },
+            }
         })
 
         const parts = imageResult.candidates![0].content?.parts!
@@ -212,25 +240,24 @@ export class GeminiClient implements ImageGeneratorClient, TTSClient, LLMClient 
                     }
                 });
 
-                const text = response.text!
+                const text = response.text
+                if (!text) {
+                    throw new Error('No text response from Gemini');
+                }
+
                 const parsedResponse = Agents[agent].responseParser(text);
 
                 return { text: parsedResponse };
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             } catch (error: any) {
-                if (error?.message?.includes('model is overloaded') || error?.error?.code === 503) {
-                    retries++;
-                    console.log(`[GEMINI] Model overloaded. Retry ${retries}/${maxRetries} in 30 seconds...`);
-                    
-                    if (retries >= maxRetries) {
-                        throw new Error(`[GEMINI] Max retries reached. Model still overloaded.`);
-                    }
-                    
-                    await sleep(30000);
-                } else {
-                    throw error;
+                retries++;
+                console.log(`[GEMINI] Error during completion: ${error}. Retry ${retries}/${maxRetries}`);
+                
+                if (retries >= maxRetries) {
+                    throw new Error(`[GEMINI] Max retries reached. Model still overloaded.`);
                 }
-            }
+                
+                await sleep(30000);
+        }
         }
 
         throw new Error(`[GEMINI] Failed to complete after ${maxRetries} retries`);

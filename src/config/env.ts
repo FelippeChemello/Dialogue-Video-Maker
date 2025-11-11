@@ -7,6 +7,7 @@ const envSchema = z.object({
     NODE_ENV: z.string().default('development'),
     
     GEMINI_API_KEY: z.string(),
+    GEMINI_PAID_API_KEY: z.string(),
     GOOGLE_SERP_API_KEY: z.string(),
     GOOGLE_SERP_ID: z.string(),
     GOOGLE_CLIENT_ID: z.string(),
