@@ -21,15 +21,14 @@ import { TTSClient } from './clients/interfaces/TTS';
 import { ENV } from './config/env';
 import { AudioEditorClient } from './clients/interfaces/AudioEditor';
 import { FFmpegClient } from './clients/ffmpeg';
-import { KokoroClient } from './clients/kokoro';
 import { GrokClient } from './clients/grok';
 
 const scriptManagerClient: ScriptManagerClient = new NotionClient(ENV.NOTION_NEWS_DATABASE_ID);
 const editor: AudioEditorClient = new FFmpegClient();
 const openai: LLMClient & ImageGeneratorClient = new OpenAIClient();
 const anthropic: LLMClient = new AnthropicClient();
+const gemini: LLMClient & ImageGeneratorClient & TTSClient = new GeminiClient();
 const grok: LLMClient = new GrokClient();
-const kokoro: TTSClient = new KokoroClient();
 const mermaid: MermaidRendererClient = new Mermaid();
 const shiki: CodeRendererClient = new Shiki();
 const google: SearcherClient = new Google();
@@ -70,7 +69,7 @@ Felippe is known for his vast knowledge, and Cody is a curious dog who is always
 
 ${script.segments.map((s) => `${s.speaker}: ${s.text}`).join('\n')}`, 'utf-8');
 
-    const audio = await kokoro.synthesizeScript(script.segments, 'full-script');
+    const audio = await gemini.synthesizeScript(script.segments, 'full-script');
 
     if (audio.duration && audio.duration > MAX_AUDIO_DURATION_FOR_SHORTS) {
         console.log(`Audio duration ${audio.duration}s exceeds maximum for shorts. Speeding up audio...`);
