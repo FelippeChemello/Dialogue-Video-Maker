@@ -24,12 +24,13 @@ import { TTSClient } from './clients/interfaces/TTS';
 import { ENV } from './config/env';
 import { AudioEditorClient } from './clients/interfaces/AudioEditor';
 import { FFmpegClient } from './clients/ffmpeg';
+import { VibeVoiceClient } from './clients/vibevoice';
 
 const scriptManagerClient: ScriptManagerClient = new NotionClient(ENV.NOTION_NEWS_DATABASE_ID);
 const editor: AudioEditorClient = new FFmpegClient();
 const openai: LLMClient & ImageGeneratorClient = new OpenAIClient();
 const anthropic: LLMClient = new AnthropicClient();
-const gemini: LLMClient & ImageGeneratorClient & TTSClient = new GeminiClient();
+const vibevoice: TTSClient = new VibeVoiceClient();
 const mermaid: MermaidRendererClient = new Mermaid();
 const shiki: CodeRendererClient = new Shiki();
 const google: SearcherClient = new Google();
@@ -43,7 +44,7 @@ const newsletter: { title: string; content: string } = newsletterFile
     ? { title: path.basename(newsletterFile, path.extname(newsletterFile)), content: fs.readFileSync(newsletterFile, 'utf-8') }
     : await gmail.fetchContent(NewsletterSource.FILIPE_DESCHAMPS);
 
-console.log("Writing script based on research...");
+console.log("Writing script based on newsletter...");
 const { text: scriptText } = await openai.complete(Agent.NEWSLETTER_WRITER, `${newsletter.title}\n\n${newsletter.content}`); 
 
 console.log("Reviewing script...");
@@ -66,7 +67,7 @@ Felippe is known for his vast knowledge, and Cody is a curious dog who is always
 
 ${script.segments.map((s) => `${s.speaker}: ${s.text}`).join('\n')}`, 'utf-8');
 
-    const audio = await gemini.synthesizeScript(script.segments, 'full-script');
+    const audio = await vibevoice.synthesizeScript(script.segments, 'full-script');
 
     if (audio.duration && audio.duration > MAX_AUDIO_DURATION_FOR_SHORTS) {
         console.log(`Audio duration ${audio.duration}s exceeds maximum for shorts. Speeding up audio...`);

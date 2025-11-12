@@ -23,6 +23,9 @@ const envSchema = z.object({
 
     KOKORO_BASE_URL: z.string(),
     KOKORO_API_KEY: z.string(),
+
+    VIBEVOICE_BASE_URL: z.string(),
+    VIBEVOICE_API_KEY: z.string(),
     
     OPENAI_API_KEY: z.string(),
     OPENAI_FELIPPE_FILE_ID: z.string(),

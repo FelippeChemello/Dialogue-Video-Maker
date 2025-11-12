@@ -22,12 +22,13 @@ import { ENV } from './config/env';
 import { AudioEditorClient } from './clients/interfaces/AudioEditor';
 import { FFmpegClient } from './clients/ffmpeg';
 import { GrokClient } from './clients/grok';
+import { VibeVoiceClient } from './clients/vibevoice';
 
 const scriptManagerClient: ScriptManagerClient = new NotionClient(ENV.NOTION_NEWS_DATABASE_ID);
 const editor: AudioEditorClient = new FFmpegClient();
 const openai: LLMClient & ImageGeneratorClient = new OpenAIClient();
 const anthropic: LLMClient = new AnthropicClient();
-const gemini: LLMClient & ImageGeneratorClient & TTSClient = new GeminiClient();
+const vibevoice: TTSClient = new VibeVoiceClient();
 const grok: LLMClient = new GrokClient();
 const mermaid: MermaidRendererClient = new Mermaid();
 const shiki: CodeRendererClient = new Shiki();
@@ -69,7 +70,7 @@ Felippe is known for his vast knowledge, and Cody is a curious dog who is always
 
 ${script.segments.map((s) => `${s.speaker}: ${s.text}`).join('\n')}`, 'utf-8');
 
-    const audio = await gemini.synthesizeScript(script.segments, 'full-script');
+    const audio = await vibevoice.synthesizeScript(script.segments, 'full-script');
 
     if (audio.duration && audio.duration > MAX_AUDIO_DURATION_FOR_SHORTS) {
         console.log(`Audio duration ${audio.duration}s exceeds maximum for shorts. Speeding up audio...`);
@@ -129,7 +130,7 @@ ${script.segments.map((s) => `${s.speaker}: ${s.text}`).join('\n')}`, 'utf-8');
     }));
 
     console.log("Generating SEO content...");
-    const { text: seoText } = await openai.complete(Agent.SEO_WRITER, review || scriptText);
+    const { text: seoText } = await openai.complete(Agent.SEO_WRITER,  script.segments.map((s) => s.text).join('\n'))
     const seo = JSON.parse(seoText);
 
     await scriptManagerClient.saveScript(script, seo, [], ENABLED_FORMATS, path.basename(scriptTextFile));

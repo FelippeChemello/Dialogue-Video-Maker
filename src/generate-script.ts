@@ -1,4 +1,4 @@
-/* eslint-disable no-case-declarations */
+ 
 import fs from 'fs';
 import path from 'path';
 
@@ -19,10 +19,12 @@ import { Google } from './clients/google';
 import { CodeRendererClient } from './clients/interfaces/CodeRenderer';
 import { Shiki } from './clients/shiki';
 import { TTSClient } from './clients/interfaces/TTS';
+import { VibeVoiceClient } from './clients/vibevoice';
 
 const openai: LLMClient & ImageGeneratorClient = new OpenAIClient();
 const anthropic: LLMClient = new AnthropicClient();
 const gemini: LLMClient & ImageGeneratorClient & TTSClient = new GeminiClient();
+const vibevoice: TTSClient = new VibeVoiceClient();
 const mermaid: MermaidRendererClient = new Mermaid();
 const shiki: CodeRendererClient = new Shiki();
 const google: SearcherClient = new Google();
@@ -59,7 +61,7 @@ Felippe is known for his vast knowledge, and Cody is a curious dog who is always
 ${script.segments.map((s) => `${s.speaker}: ${s.text}`).join('\n')}
     `, 'utf-8');
 
-    const audio = await gemini.synthesizeScript(script.segments, 'full-script');
+    const audio = await vibevoice.synthesizeScript(script.segments, 'full-script');
     script.audioSrc = audio.audioFileName;
 
     await Promise.all(script.segments.map(async (segment, index) => {
