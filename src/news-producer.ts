@@ -36,8 +36,10 @@ const google: SearcherClient = new Google();
 const ENABLED_FORMATS: Array<'Portrait' | 'Landscape'> = ['Portrait'];
 const MAX_AUDIO_DURATION_FOR_SHORTS = 170;
 
+const latestScripts = await scriptManagerClient.retrieveLatestScripts(10);
+
 console.log(`Starting research about the latest news`);
-const { text: research } = await grok.complete(Agent.NEWS_RESEARCHER, `Generate detailed research about the latest news in technology, science, health, and world events. Provide comprehensive information with relevant data and context.`);
+const { text: research } = await grok.complete(Agent.NEWS_RESEARCHER, `We have already published these news articles:\n${latestScripts.map(s => `- ${s.title}`).join('\n')}\n\nNow, research other relevant and recent news articles (from the past 24 hours) that would be interesting for our audience.`);
 
 console.log("--------------------------")
 console.log("Research:")

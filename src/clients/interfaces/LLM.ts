@@ -35,7 +35,7 @@ export const Agents: {
             [ModelProvider.OPENAI]: 'gpt-5.1',
             [ModelProvider.ANTHROPIC]: 'claude-sonnet-4-5',
             [ModelProvider.GEMINI]: 'gemini-2.5-flash',
-            [ModelProvider.GROK]: 'grok-4-fast-reasoning',
+            [ModelProvider.GROK]: 'grok-4-1-fast-reasoning',
         },
         responseParser: (response: string) => response.trim(),
     },
@@ -45,7 +45,7 @@ export const Agents: {
             [ModelProvider.OPENAI]: 'gpt-5.1',
             [ModelProvider.ANTHROPIC]: 'claude-sonnet-4-5',
             [ModelProvider.GEMINI]: 'gemini-2.5-pro',
-            [ModelProvider.GROK]: 'grok-4-fast-reasoning',
+            [ModelProvider.GROK]: 'grok-4-1-fast-reasoning',
         },
         responseParser: (response: string) => response.trim(),
     },
@@ -55,7 +55,7 @@ export const Agents: {
             [ModelProvider.OPENAI]: 'gpt-5.1',
             [ModelProvider.ANTHROPIC]: 'claude-sonnet-4-5',
             [ModelProvider.GEMINI]: 'gemini-2.5-flash',
-            [ModelProvider.GROK]: 'grok-4-fast-reasoning',
+            [ModelProvider.GROK]: 'grok-4-1-fast-reasoning',
         },
         responseParser: (response: string) => response.trim(),
     },
@@ -65,7 +65,7 @@ export const Agents: {
             [ModelProvider.OPENAI]: 'gpt-5.1',
             [ModelProvider.ANTHROPIC]: 'claude-sonnet-4-5',
             [ModelProvider.GEMINI]: 'gemini-2.5-pro',
-            [ModelProvider.GROK]: 'grok-4-fast-non-reasoning',
+            [ModelProvider.GROK]: 'grok-4-1-fast-non-reasoning',
         },
         responseParser: (response: string) => {
             const match = response.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
@@ -78,7 +78,7 @@ export const Agents: {
             [ModelProvider.OPENAI]: 'gpt-5.1',
             [ModelProvider.ANTHROPIC]: 'claude-sonnet-4-5',
             [ModelProvider.GEMINI]: 'gemini-2.5-pro',
-            [ModelProvider.GROK]: 'grok-4-fast-non-reasoning',
+            [ModelProvider.GROK]: 'grok-4-1-fast-non-reasoning',
         },
         responseParser: (response: string) => {
             const match = response.match(/\{[\s\S]*\}/);
@@ -91,7 +91,7 @@ export const Agents: {
             [ModelProvider.OPENAI]: 'gpt-5.1',
             [ModelProvider.ANTHROPIC]: 'claude-sonnet-4-5',
             [ModelProvider.GEMINI]: 'gemini-2.5-pro',
-            [ModelProvider.GROK]: 'grok-4-fast-reasoning',
+            [ModelProvider.GROK]: 'grok-4-1-fast-reasoning',
         },
         responseParser: (response: string) => {
             const match = response.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
@@ -104,7 +104,7 @@ export const Agents: {
             [ModelProvider.OPENAI]: 'gpt-5.1',
             [ModelProvider.ANTHROPIC]: 'claude-sonnet-4-5',
             [ModelProvider.GEMINI]: 'gemini-2.5-pro',
-            [ModelProvider.GROK]: 'grok-4-fast-reasoning',
+            [ModelProvider.GROK]: 'grok-4-1-fast-reasoning',
         },
         responseParser: (response: string) => {
             const match = response.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
@@ -117,7 +117,7 @@ export const Agents: {
             [ModelProvider.OPENAI]: 'gpt-5.1',
             [ModelProvider.ANTHROPIC]: 'claude-sonnet-4-5',
             [ModelProvider.GEMINI]: 'gemini-2.5-pro',
-            [ModelProvider.GROK]: 'grok-4-fast-non-reasoning',
+            [ModelProvider.GROK]: 'grok-4-1-fast-non-reasoning',
         },
         responseParser: (response: string) => {
             const match = response.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
@@ -130,7 +130,7 @@ export const Agents: {
             [ModelProvider.OPENAI]: 'gpt-5.1',
             [ModelProvider.ANTHROPIC]: 'claude-sonnet-4-5',
             [ModelProvider.GEMINI]: 'gemini-2.5-pro',
-            [ModelProvider.GROK]: 'grok-4-fast-non-reasoning',
+            [ModelProvider.GROK]: 'grok-4-1-fast-non-reasoning',
         },
         responseParser: (response: string) => response.trim()
     }

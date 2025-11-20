@@ -71,6 +71,14 @@ export type VideoBackground = {
     seed?: string | number;
 };
 
+export type BasicScript = {
+    id: string;
+    title: string;
+    status: ScriptStatus;
+    compositions: Array<'Portrait' | 'Landscape'>;
+    seo?: string;
+}
+
 export type ScriptWithTitle = {
     title: string;
     segments: Script;

@@ -5,7 +5,7 @@ import { v4 } from 'uuid';
 import splitFile from 'split-file'
 import { SingleBar } from 'cli-progress'
 
-import { NotionMainDatabasePage, ScriptStatus, ScriptWithTitle, SEO, Speaker, VideoBackground } from "../config/types";
+import { BasicScript, NotionMainDatabasePage, ScriptStatus, ScriptWithTitle, SEO, Speaker, VideoBackground } from "../config/types";
 import { ENV } from "../config/env";
 import { outputDir, publicDir } from "../config/path";
 import { ScriptManagerClient } from './interfaces/ScriptManager';
@@ -94,7 +94,12 @@ export class NotionClient implements ScriptManagerClient {
                         type: 'file_upload',
                         file_upload: { id: fileId! },
                     }))
-                } 
+                },
+                Date: { 
+                    date: { 
+                        start: (new Date()).toISOString(),
+                    }
+                },
             }
         })
 
@@ -183,6 +188,35 @@ export class NotionClient implements ScriptManagerClient {
         });
     }
 
+    async retrieveLatestScripts(limit: number): Promise<Array<BasicScript>> {
+        console.log(`[NOTION] Retrieving latest ${limit} scripts`);
+
+        const response = await client.databases.query({
+            database_id: this.databaseId,
+            sorts: [
+                {
+                    property: 'Date',
+                    direction: 'descending',
+                }
+            ],
+            page_size: limit > 0 && limit <= 100 ? limit : 100,
+        })
+
+        console.log(`[NOTION] Found ${response.results.length} scripts`);
+        const scripts: Array<BasicScript> = [];
+
+        for (const page of response.results as unknown as Array<NotionMainDatabasePage>) {
+            const title = page.properties.Name.title[0].text.content;
+            const status = page.properties.Status.status.name;
+            const id = page.id;
+            const compositions = page.properties.Composition.multi_select.map((c) => c.name);
+            const seo = page.properties.Title.rich_text[0].text.content;
+            
+            scripts.push({ id, title, status, compositions, seo });
+        }
+        
+        return scripts;
+    }
 
     async retrieveScript(status: ScriptStatus, limit?: number): Promise<Array<ScriptWithTitle>> {
         console.log(`[NOTION] Retrieving scripts with status: ${status}`);
