@@ -8,7 +8,6 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
-import {Video} from '@remotion/media'
 import { useMemo } from "react";
 import { z } from "zod";
 import { loadFont } from "@remotion/google-fonts/TitanOne";
@@ -21,7 +20,7 @@ import Text from "./Text";
 import { getMimetypeFromFilename } from "../utils/get-mimetype-from-filename";
 import { LoopableOffthreadVideo } from "./LoopableOffthreadVideo";
 import { ImageWithBackground } from "./ImageWithBackground";
-import { TechTunnel } from "./TechTunnel";
+import { Background } from "./Background";
 
 const { fontFamily } = loadFont();
 
@@ -48,23 +47,7 @@ export const Portrait: React.FC<z.infer<typeof videoSchema>> = ({ segments, back
 
   return (
     <AbsoluteFill style={{ backgroundColor: background.color, fontFamily }}>
-      {background.video?.src ? (
-        <Video
-          src={staticFile(background.video.src)} 
-          muted 
-          trimBefore={(background.video.initTime || 0) * fps}
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-          }}
-          loop
-        />
-      ) : <TechTunnel />}
-      
+      <Background {...background} />      
 
       <Audio src={staticFile(audioSrc)} />
 

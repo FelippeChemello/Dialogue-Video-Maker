@@ -311,7 +311,9 @@ export class NotionClient implements ScriptManagerClient {
     async retrieveAssets(pageId: string): Promise<{ background: VideoBackground }> {
         console.log(`[NOTION] Retrieving assets for page ${pageId}`);
 
-        const availableBackgroundVideos = fs.readdirSync(path.join(publicDir, 'assets'))
+        const assets = fs.readdirSync(path.join(publicDir, 'assets'));
+
+        const availableBackgroundVideos = assets
             .filter(file => file.endsWith('.mp4'))
             .map(file => ({
                 src: `assets/${file}`,
@@ -320,6 +322,15 @@ export class NotionClient implements ScriptManagerClient {
 
         const randomBackgroundVideo = availableBackgroundVideos[Math.floor(Math.random() * availableBackgroundVideos.length)];
 
+        const availableGIFs = assets
+            .filter(file => file.endsWith('.gif'))
+            .map(file => ({
+                src: `assets/${file}`,
+                name: file.replace('.gif', ''),
+            }));
+
+        const randomGIF = availableGIFs[Math.floor(Math.random() * availableGIFs.length)];
+
         const background: VideoBackground = {
             color: "oklch(70.8% 0 0)",
             mainColor: "oklch(68.5% 0.169 237.323)",
@@ -327,10 +338,13 @@ export class NotionClient implements ScriptManagerClient {
             seed: v4(),
             video: {
                 src: randomBackgroundVideo?.src,
+            },
+            gif: {
+                src: randomGIF?.src,
             }
         }
 
-        console.log(`[NOTION] Selected background video: ${randomBackgroundVideo?.name || 'none'}`);
+        console.log(`[NOTION] Selected background video: ${randomBackgroundVideo?.name || 'none'} and GIF: ${randomGIF?.name || 'none'}`);
 
         return { background };
     }
