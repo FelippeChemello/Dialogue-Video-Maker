@@ -43,7 +43,7 @@ const newsletter: { title: string; content: string } = newsletterFile
     ? { title: path.basename(newsletterFile, path.extname(newsletterFile)), content: fs.readFileSync(newsletterFile, 'utf-8') }
     : await gmail.fetchContent(NewsletterSource.FILIPE_DESCHAMPS);
 
-console.log("Writing script based on newsletter...");
+console.log(`Writing script based on newsletter ${newsletter.title}...`);
 const { text: scriptText } = await openai.complete(Agent.NEWSLETTER_WRITER, `${newsletter.title}\n\n${newsletter.content}`); 
 
 console.log("Reviewing script...");
