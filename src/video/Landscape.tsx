@@ -20,7 +20,7 @@ import { Felippe } from "./Felippe";
 import { getMimetypeFromFilename } from "../utils/get-mimetype-from-filename";
 import { LoopableOffthreadVideo } from "./LoopableOffthreadVideo";
 import { ImageWithBackground } from "./ImageWithBackground";
-import { WrinkledPaper } from "./WrinkledPaper";
+import { Background } from "./Background";
 import { Speaker } from "../clients/interfaces/TTS";
 
 const { fontFamily } = loadFont();
@@ -48,7 +48,7 @@ export const Landscape: React.FC<z.infer<typeof videoSchema>> = ({ segments, bac
 
   return (
     <AbsoluteFill style={{ fontFamily }}>
-      <WrinkledPaper />
+      <Background {...background} />
 
       {audio.map((audio, audioIndex, audios) => (
         <Sequence 

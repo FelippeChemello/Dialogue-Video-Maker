@@ -5,7 +5,7 @@ import { v4 } from 'uuid';
 import splitFile from 'split-file'
 import { SingleBar } from 'cli-progress'
 
-import { NotionMainDatabasePage, ScriptStatus, ScriptWithTitle, SEO, VideoBackground } from "../config/types";
+import { BasicScript, NotionMainDatabasePage, ScriptStatus, ScriptWithTitle, SEO, VideoBackground } from "../config/types";
 import { ENV } from "../config/env";
 import { outputDir, publicDir } from "../config/path";
 import { SaveScriptParams, ScriptManagerClient } from './interfaces/ScriptManager';
@@ -180,6 +180,36 @@ export class NotionClient implements ScriptManagerClient {
                 },
             }
         });
+    }
+
+    async retrieveLatestScripts(limit: number): Promise<Array<BasicScript>> {
+        console.log(`[NOTION] Retrieving latest ${limit} scripts`);
+
+        const response = await client.databases.query({
+            database_id: this.databaseId,
+            sorts: [
+                {
+                    property: 'Date',
+                    direction: 'descending',
+                }
+            ],
+            page_size: limit > 0 && limit <= 100 ? limit : 100,
+        })
+
+        console.log(`[NOTION] Found ${response.results.length} scripts`);
+        const scripts: Array<BasicScript> = [];
+
+        for (const page of response.results as unknown as Array<NotionMainDatabasePage>) {
+            const title = page.properties.Name.title[0].text.content;
+            const status = page.properties.Status.status.name;
+            const id = page.id;
+            const compositions = page.properties.Composition.multi_select.map((c) => c.name);
+            const seo = page.properties.Title.rich_text[0].text.content;
+            
+            scripts.push({ id, title, status, compositions, seo });
+        }
+        
+        return scripts;
     }
 
     private async getColumnListData(blockId: string): Promise<{ text: string; mediaSrc: string }> {
@@ -368,7 +398,9 @@ export class NotionClient implements ScriptManagerClient {
     async retrieveAssets(pageId: string): Promise<{ background: VideoBackground }> {
         console.log(`[NOTION] Retrieving assets for page ${pageId}`);
 
-        const availableBackgroundVideos = fs.readdirSync(path.join(publicDir, 'assets'))
+        const assets = fs.readdirSync(path.join(publicDir, 'assets'));
+
+        const availableBackgroundVideos = assets
             .filter(file => file.endsWith('.mp4'))
             .map(file => ({
                 src: `assets/${file}`,
@@ -377,6 +409,15 @@ export class NotionClient implements ScriptManagerClient {
 
         const randomBackgroundVideo = availableBackgroundVideos[Math.floor(Math.random() * availableBackgroundVideos.length)];
 
+        const availableGIFs = assets
+            .filter(file => file.endsWith('.gif'))
+            .map(file => ({
+                src: `assets/${file}`,
+                name: file.replace('.gif', ''),
+            }));
+
+        const randomGIF = availableGIFs[Math.floor(Math.random() * availableGIFs.length)];
+
         const background: VideoBackground = {
             color: "oklch(97% 0 0)",
             mainColor: "oklch(68.5% 0.169 237.323)",
@@ -384,10 +425,13 @@ export class NotionClient implements ScriptManagerClient {
             seed: v4(),
             video: {
                 src: randomBackgroundVideo?.src,
+            },
+            gif: {
+                src: randomGIF?.src,
             }
         }
 
-        console.log(`[NOTION] Selected background video: ${randomBackgroundVideo?.name || 'none'}`);
+        console.log(`[NOTION] Selected background video: ${randomBackgroundVideo?.name || 'none'} and GIF: ${randomGIF?.name || 'none'}`);
 
         return { background };
     }

@@ -85,11 +85,22 @@ export type VideoBackground = {
       src: string;
       initTime?: number;
     };
+    gif?: {
+      src: string;
+    };
     color?: string;
     mainColor?: string;
     secondaryColor?: string;
     seed?: string | number;
 };
+
+export type BasicScript = {
+    id: string;
+    title: string;
+    status: ScriptStatus;
+    compositions: Array<Compositions>;
+    seo?: string;
+}
 
 export type AudioScript = {
     src: string
@@ -188,6 +199,9 @@ export const videoSchema = z.object({
     video: z.object({
       src: z.string(),
       initTime: z.number().optional(),
+    }).optional(),
+    gif: z.object({
+      src: z.string(),
     }).optional(),
     color: zColor(),
     mainColor: zColor(),

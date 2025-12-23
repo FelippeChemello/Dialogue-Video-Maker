@@ -1,9 +1,7 @@
- 
-import fs from 'fs';
 import path from 'path';
 
-import { outputDir, publicDir } from './config/path';
-import { compositionOrientationMap, Compositions, ScriptWithTitle } from './config/types';
+import { publicDir } from './config/path';
+import { Compositions, ScriptWithTitle } from './config/types';
 import { ScriptManagerClient } from './clients/interfaces/ScriptManager';
 import { NotionClient } from './clients/notion';
 import { ImageGeneratorClient } from './clients/interfaces/ImageGenerator';
@@ -12,22 +10,16 @@ import { Agent, LLMClient } from "./clients/interfaces/LLM";
 import { OpenAIClient } from "./clients/openai";
 import { AnthropicClient } from "./clients/anthropic";
 import { GeminiClient } from "./clients/gemini";
-import { Mermaid } from './clients/mermaid';
-import { MermaidRendererClient } from './clients/interfaces/MermaidRenderer';
-import { SearcherClient } from './clients/interfaces/Searcher';
-import { Google } from './clients/google';
-import { CodeRendererClient } from './clients/interfaces/CodeRenderer';
-import { Shiki } from './clients/shiki';
 import { TTSClient } from './clients/interfaces/TTS';
-import { VibeVoiceClient } from './clients/vibevoice';
+import { saveScriptFile } from './services/save-script-file';
+import { synthesizeSpeech } from './services/synthesize-speech';
+import { generateIllustration } from './services/generate-illustration';
+import { generateThumbnails } from './services/generate-thumbnails';
+import { cleanupFiles } from './services/cleanup-files';
 
 const openai: LLMClient & ImageGeneratorClient = new OpenAIClient();
 const anthropic: LLMClient = new AnthropicClient();
 const gemini: LLMClient & ImageGeneratorClient & TTSClient = new GeminiClient();
-const vibevoice: TTSClient = new VibeVoiceClient();
-const mermaid: MermaidRendererClient = new Mermaid();
-const shiki: CodeRendererClient = new Shiki();
-const google: SearcherClient = new Google();
 const scriptManagerClient: ScriptManagerClient = new NotionClient();
 
 const ENABLED_FORMATS: Array<Compositions> = [Compositions.Portrait];
@@ -54,68 +46,19 @@ const { text: review } = await anthropic.complete(Agent.SCRIPT_REVIEWER, scriptT
 const scripts = JSON.parse(review) as ScriptWithTitle | ScriptWithTitle[];
 
 for (const script of Array.isArray(scripts) ? scripts : [scripts]) {
-    fs.writeFileSync(path.join(outputDir, `${titleToFileName(script.title)}.txt`), `
-Read aloud this conversation between Felippe and his dog Cody. Cody has a curious and playful personality with an animated character like voice, while Felippe is knowledgeable and enthusiastic.
-Felippe is known for his vast knowledge, and Cody is a curious dog who is always asking questions about the world, both are Brazilian Portuguese speakers and have a super very fast-paced, energetic, and enthusiastic way of speaking.
+    const scriptTextFile = saveScriptFile(script.segments, `${titleToFileName(script.title)}.txt`);
 
-${script.segments.map((s) => `${s.speaker}: ${s.text}`).join('\n')}
-    `, 'utf-8');
+    await Promise.all(
+        script.segments.map(async (segment) => {
+            const mediaSrc = await generateIllustration(segment);
+            segment.mediaSrc = mediaSrc;
+        })
+    );
 
-    const audio = await vibevoice.synthesizeScript(script.segments, 'full-script');
+    const thumbnails = await generateThumbnails(script.title, ENABLED_FORMATS);    
+
+    const audio = await synthesizeSpeech(script.segments);
     script.audio = [{ src: audio.audioFileName, duration: audio.duration }];
-
-    await Promise.all(script.segments.map(async (segment, index) => {
-        if (segment.illustration) {
-            let mediaSrc: string | undefined;
-    
-            switch (segment.illustration.type) {
-                case 'mermaid': 
-                    console.log(`[${index + 1}/${script.segments.length}] Generating mermaid`)
-    
-                    const { text: mermaidCode } = await openai.complete(Agent.MERMAID_GENERATOR, `Specification: ${segment.illustration.description} \n\nContext: ${segment.text}`);
-                    const exportedMermaid = await mermaid.exportMermaid(mermaidCode, index);
-    
-                    mediaSrc = exportedMermaid.mediaSrc;
-                    break;
-    
-                case 'query': 
-                    console.log(`[${index + 1}/${script.segments.length}] Searching for image`);
-    
-                    const imageSearched = await google.searchImage(segment.illustration.description, index)
-                    
-                    mediaSrc = imageSearched.mediaSrc
-                    break;
-    
-                case 'code': 
-                    console.log(`[${index + 1}/${script.segments.length}] Generating code`)
-    
-                    const codeGenerated = await shiki.exportCode(segment.illustration.description, index);
-                    
-                    mediaSrc = codeGenerated.mediaSrc;
-                    break;
-    
-                case 'image_generation': 
-                default: 
-                    console.log(`[${index + 1}/${script.segments.length}] Generating image`);
-                    const mediaGenerated = await openai.generate(segment.illustration.description, index);
-                    
-                    mediaSrc = mediaGenerated.mediaSrc;
-                    break;
-            }
-    
-            script.segments[index].mediaSrc = mediaSrc;
-        }
-    }));
-
-    const thumbnails = [];
-    for (const format of ENABLED_FORMATS) {
-        console.log(`Generating ${format} thumbnail...`);
-        const { mediaSrc: thumbnailSrc } = await openai.generateThumbnail(script.title, compositionOrientationMap[format])
-
-        if (thumbnailSrc) {
-            thumbnails.push(thumbnailSrc);
-        }
-    }
 
     await scriptManagerClient.saveScript({
         script,
@@ -123,11 +66,11 @@ ${script.segments.map((s) => `${s.speaker}: ${s.text}`).join('\n')}
         formats: ENABLED_FORMATS,
     })
 
-    console.log(`Cleaning up assets...`)
-    for (const segment of script.segments) {
-        if (segment.mediaSrc) {
-            const imagePath = path.join(publicDir, segment.mediaSrc);
-            fs.unlinkSync(imagePath);
-        }
-    }
+    cleanupFiles([
+        scriptTextFile,
+        ...script.audio!.map(a => path.join(publicDir, a.src)),
+        ...script.segments
+            .map(segment => segment.mediaSrc ? path.join(publicDir, segment.mediaSrc) : null)
+            .filter(Boolean) as Array<string>
+    ])
 }

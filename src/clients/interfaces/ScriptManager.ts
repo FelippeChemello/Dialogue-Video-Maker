@@ -1,4 +1,4 @@
-import { Compositions, ScriptStatus, ScriptWithTitle, SEO, VideoBackground } from "../../config/types";
+import { BasicScript, Compositions, ScriptStatus, ScriptWithTitle, SEO, VideoBackground } from "../../config/types";
 
 export type SaveScriptParams = {
     script: ScriptWithTitle;
@@ -21,4 +21,5 @@ export interface ScriptManagerClient {
     downloadAssets(script: ScriptWithTitle): Promise<ScriptWithTitle>;
     downloadOutputOfDoneScripts(): Promise<Array<string>>;
     saveOutput(scriptId: string, output: Array<string>): Promise<void>;
+    retrieveLatestScripts(limit: number): Promise<Array<BasicScript>>;
 }
