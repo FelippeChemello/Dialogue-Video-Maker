@@ -17,7 +17,6 @@ export async function synthesizeSpeech(segments: ScriptWithTitle['segments'], ma
     let audio: { audioFileName: string, duration?: number };
     try {
        audio = await vibevoice.synthesizeScript(segments, 'full-script')
-
     } catch {
         console.log("VibeVoice synthesis failed, trying Gemini TTS...");
         audio = await gemini.synthesizeScript(segments, 'full-script');

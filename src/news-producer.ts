@@ -1,7 +1,7 @@
 import path from 'path';
 
 import { publicDir } from './config/path';
-import { ScriptWithTitle } from './config/types';
+import { Compositions, ScriptWithTitle } from './config/types';
 import { ScriptManagerClient } from './clients/interfaces/ScriptManager';
 import { NotionClient } from './clients/notion';
 import { ImageGeneratorClient } from './clients/interfaces/ImageGenerator';
@@ -22,9 +22,8 @@ const openai: LLMClient & ImageGeneratorClient = new OpenAIClient();
 const anthropic: LLMClient = new AnthropicClient();
 const grok: LLMClient = new GrokClient();
 
-const ENABLED_FORMATS: Array<'Portrait' | 'Landscape'> = ['Portrait'];
-
 const latestScripts = await scriptManagerClient.retrieveLatestScripts(10);
+const ENABLED_FORMATS: Array<Compositions> = [Compositions.Portrait];
 
 console.log(`Starting research about the latest news`);
 const { text: research } = await grok.complete(Agent.NEWS_RESEARCHER, `We have already published these news articles:\n${latestScripts.map(s => `- ${s.title}`).join('\n')}\n\nNow, research other relevant and recent news articles (from the past 24 hours) that would be interesting for our audience.`);
@@ -55,7 +54,7 @@ for (const script of Array.isArray(scripts) ? scripts : [scripts]) {
     const scriptTextFile = saveScriptFile(script.segments, `${titleToFileName(script.title)}.txt`);
 
     const audio = await synthesizeSpeech(script.segments, MAX_AUDIO_DURATION_FOR_SHORTS);
-    script.audioSrc = audio.audioFileName;
+    script.audio = [{ src: audio.audioFileName, duration: audio.duration }];
 
     await Promise.all(
         script.segments.map(async (segment) => {
@@ -64,17 +63,15 @@ for (const script of Array.isArray(scripts) ? scripts : [scripts]) {
         })
     );
         
-    await scriptManagerClient.saveScript(
+    await scriptManagerClient.saveScript({
         script,
-        { title: script.title, description: '', hashtags: [], tags: [] }, 
-        [],
-        ENABLED_FORMATS, 
-        path.basename(scriptTextFile)
-    );
+        scriptSrc: path.basename(scriptTextFile),
+        formats: ENABLED_FORMATS,
+    });
 
     cleanupFiles([
         scriptTextFile,
-        path.join(publicDir, script.audioSrc!),
+        ...script.audio!.map(a => path.join(publicDir, a.src)),
         ...script.segments
             .map(segment => segment.mediaSrc ? path.join(publicDir, segment.mediaSrc) : null)
             .filter(Boolean) as Array<string>

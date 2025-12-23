@@ -1,7 +1,7 @@
 import path from 'path';
 
 import { publicDir } from './config/path';
-import { ScriptWithTitle } from './config/types';
+import { Compositions, ScriptWithTitle } from './config/types';
 import { ScriptManagerClient } from './clients/interfaces/ScriptManager';
 import { NotionClient } from './clients/notion';
 import { ImageGeneratorClient } from './clients/interfaces/ImageGenerator';
@@ -22,7 +22,7 @@ const anthropic: LLMClient = new AnthropicClient();
 const gemini: LLMClient & ImageGeneratorClient & TTSClient = new GeminiClient();
 const scriptManagerClient: ScriptManagerClient = new NotionClient();
 
-const ENABLED_FORMATS: Array<'Portrait' | 'Landscape'> = ['Portrait'];
+const ENABLED_FORMATS: Array<Compositions> = [Compositions.Portrait];
 
 const topic = process.argv[2]
 if (!topic) {
@@ -48,9 +48,6 @@ const scripts = JSON.parse(review) as ScriptWithTitle | ScriptWithTitle[];
 for (const script of Array.isArray(scripts) ? scripts : [scripts]) {
     const scriptTextFile = saveScriptFile(script.segments, `${titleToFileName(script.title)}.txt`);
 
-    const { audioFileName } = await synthesizeSpeech(script.segments);
-    script.audioSrc = audioFileName;
-
     await Promise.all(
         script.segments.map(async (segment) => {
             const mediaSrc = await generateIllustration(segment);
@@ -60,17 +57,18 @@ for (const script of Array.isArray(scripts) ? scripts : [scripts]) {
 
     const thumbnails = await generateThumbnails(script.title, ENABLED_FORMATS);    
 
-    await scriptManagerClient.saveScript(
-        script, 
-        { title: script.title, description: '', hashtags: [], tags: [] },
-        thumbnails, 
-        ENABLED_FORMATS,
-        path.basename(scriptTextFile)
-    )
+    const audio = await synthesizeSpeech(script.segments);
+    script.audio = [{ src: audio.audioFileName, duration: audio.duration }];
+
+    await scriptManagerClient.saveScript({
+        script,
+        thumbnailsSrc: thumbnails,
+        formats: ENABLED_FORMATS,
+    })
 
     cleanupFiles([
         scriptTextFile,
-        path.join(publicDir, script.audioSrc!),
+        ...script.audio!.map(a => path.join(publicDir, a.src)),
         ...script.segments
             .map(segment => segment.mediaSrc ? path.join(publicDir, segment.mediaSrc) : null)
             .filter(Boolean) as Array<string>

@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 
 import { publicDir } from './config/path';
-import { ScriptWithTitle } from './config/types';
+import { Compositions, ScriptWithTitle } from './config/types';
 import { ScriptManagerClient } from './clients/interfaces/ScriptManager';
 import { NotionClient } from './clients/notion';
 import { ImageGeneratorClient } from './clients/interfaces/ImageGenerator';
@@ -24,14 +24,14 @@ const openai: LLMClient & ImageGeneratorClient = new OpenAIClient();
 const anthropic: LLMClient = new AnthropicClient();
 const gmail: NewsletterFetcher = new GmailClient();
 
-const ENABLED_FORMATS: Array<'Portrait' | 'Landscape'> = ['Portrait'];
+const ENABLED_FORMATS: Array<Compositions> = [Compositions.Portrait];
 
 const newsletterFile = process.argv[2]
 const newsletter: { title: string; content: string } = newsletterFile 
     ? { title: path.basename(newsletterFile, path.extname(newsletterFile)), content: fs.readFileSync(newsletterFile, 'utf-8') }
     : await gmail.fetchContent(NewsletterSource.FILIPE_DESCHAMPS);
 
-console.log("Writing script based on newsletter...");
+console.log(`Writing script based on newsletter ${newsletter.title}...`);
 const { text: scriptText } = await openai.complete(Agent.NEWSLETTER_WRITER, `${newsletter.title}\n\n${newsletter.content}`); 
 
 console.log("Reviewing script...");
@@ -50,7 +50,7 @@ for (const script of Array.isArray(scripts) ? scripts : [scripts]) {
     const scriptTextFile = saveScriptFile(script.segments, `${titleToFileName(script.title)}.txt`);
 
     const audio = await synthesizeSpeech(script.segments, MAX_AUDIO_DURATION_FOR_SHORTS);
-    script.audioSrc = audio.audioFileName;
+    script.audio = [{ src: audio.audioFileName, duration: audio.duration }];
 
     await Promise.all(
         script.segments.map(async (segment) => {
@@ -59,17 +59,15 @@ for (const script of Array.isArray(scripts) ? scripts : [scripts]) {
         })
     );
 
-    await scriptManagerClient.saveScript(
+    await scriptManagerClient.saveScript({
         script, 
-        { title: script.title, description: '', hashtags: [], tags: [] },
-        [], 
-        ENABLED_FORMATS, 
-        path.basename(scriptTextFile)
-    );
+        formats: ENABLED_FORMATS, 
+        scriptSrc: path.basename(scriptTextFile)
+    });
 
     cleanupFiles([
         scriptTextFile,
-        path.join(publicDir, script.audioSrc!),
+        ...script.audio!.map(a => path.join(publicDir, a.src)),
         ...script.segments
             .map(segment => segment.mediaSrc ? path.join(publicDir, segment.mediaSrc) : null)
             .filter(Boolean) as Array<string>
