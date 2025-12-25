@@ -29,13 +29,13 @@ type RoastScript = {
         job: string;  
         location: string;
         main_photo_description: string; // Description of how the person looks like, this is the base for other photo descriptions - super detailed
-        photos: string[]; // Array of photo descriptions, each describing a photo on the profile, the main_photo_description will be used as a reference
+        photos: string[]; // Array of photo descriptions, each describing a photo on the profile, the main_photo_description will be used as a reference - Do not include anything that could be moderated as sexual, drugs or violence on the photos
         bio: string;
     },
     script: { // Everything will be directly spoken in the video, take care to make it funny and savage without any text formatting
-        video_intro: string; // Intro to the video - This will be the opening lines spoken by the reviewer while the tinder profile is being loaded on screen
+        video_intro: string; // Intro to the video - This will be the opening lines spoken by the reviewer while the tinder profile is being loaded on screen - Ultrashort and catchy
         intro: string; // Introduction to the fictional profile
-        photo_roasts: Array<string>; // Array of roasts for each photo in same order as the photos array
+        photo_roasts: Array<string>; // Array of roasts for each photo in same order as the photos array - Do not number them, since some of them can be skipped if the photo is missing
         bio_roast: Array<{
             target: string; // The specific part of the bio being roasted - Exactly as it appears in the bio
             narration: string; // The roast narration for that specific part of the bio
